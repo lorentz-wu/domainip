@@ -1,4 +1,7 @@
 name: Go
+env:
+  GOPROXY: https://proxy.golang.org,direct
+  
 on:
   workflow_dispatch:
   schedule:
