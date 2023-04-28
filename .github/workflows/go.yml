@@ -1,6 +1,7 @@
 name: Go
 env:
   GOPROXY: https://proxy.golang.org,direct
+  GOPATH: "~/go"
   
 on:
   workflow_dispatch:
