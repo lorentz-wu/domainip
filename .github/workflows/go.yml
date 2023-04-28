@@ -14,30 +14,6 @@ jobs:
           fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
       
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4.0.0
         with:
           go-version: 1.20
-        
-      - name: Run build
-      - run: go build
-      - run: domainip > host
-      
-      - name: Commit files
-        id: commit-files
-        run: |
-          if [ -n "$(git status --porcelain host)" ]; then
-            git config --local user.email "github-actions[bot]@users.noreply.github.com"
-            git config --local user.name "github-actions[bot]"
-            git add host
-            git commit -m "docs: update host"
-            echo "hasChange=true" >> $GITHUB_OUTPUT
-          else
-            echo "No changes detected"
-          fi
-      
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        if: ${{ steps.commit-files.outputs.hasChange == 'true' }}
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
