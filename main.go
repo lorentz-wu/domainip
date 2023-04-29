@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -140,38 +141,46 @@ func randomSelect(ips []string) string {
 }
 
 func generateHosts(bestIP func(ips []string) string) string {
-
-	results := map[string]string{}
-
-	var wg sync.WaitGroup
+	var results = make(map[string]string)
 	var mu sync.Mutex
-	wg.Add(len(githubURLs))
 
-	for _, d := range githubURLs {
-		//fmt.Println(d)
-		// if d == "assets-cdn.github.com" {
-		// 	fmt.Println(d)
-		// }
-		go func(addr string) {
+	// Create a channel to receive domain names
+	domains := make(chan string)
+
+	// Start N worker goroutines to process domains
+	const numWorkers = 32
+	var wg sync.WaitGroup
+	wg.Add(numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		go func() {
 			defer wg.Done()
 
-			ips, err := DomainToIP(addr)
-			if err != nil || len(ips) == 0 {
-				return
+			for d := range domains {
+				ips, err := DomainToIP(d)
+				if err != nil || len(ips) == 0 {
+					continue
+				}
+
+				minDelayIP := bestIP(ips)
+
+				mu.Lock()
+				results[d] = minDelayIP
+				mu.Unlock()
 			}
-
-			minDelayIP := bestIP(ips)
-			mu.Lock()
-			results[addr] = minDelayIP
-			mu.Unlock()
-		}(d)
-
+		}()
 	}
 
+	// Send domains to the channel
+	for _, d := range githubURLs {
+		domains <- d
+	}
+	close(domains)
+
 	wg.Wait()
+
 	content := ""
 	for k, v := range results {
-		content += v + "  " + k + "\n"
+		content += v + strings.Repeat(" ", 16-len(v)) + k + "\n"
 	}
 
 	return fmt.Sprintf(HOSTS_TEMPLATE, content, time.Now())
