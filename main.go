@@ -141,8 +141,8 @@ func randomSelect(ips []string) string {
 }
 
 func generateHosts(bestIP func(ips []string) string) string {
-	var results = make(map[string]string)
-	var mu sync.Mutex
+	var hostnamesToIPs = make(map[string]string)
+	var mutex sync.Mutex
 
 	// Create a channel to receive domain names
 	domains := make(chan string)
@@ -155,35 +155,35 @@ func generateHosts(bestIP func(ips []string) string) string {
 		go func() {
 			defer wg.Done()
 
-			for d := range domains {
-				ips, err := DomainToIP(d)
+			for domain := range domains {
+				ips, err := DomainToIP(domain)
 				if err != nil || len(ips) == 0 {
 					continue
 				}
 
 				minDelayIP := bestIP(ips)
 
-				mu.Lock()
-				results[d] = minDelayIP
-				mu.Unlock()
+				mutex.Lock()
+				hostnamesToIPs[domain] = minDelayIP
+				mutex.Unlock()
 			}
 		}()
 	}
 
 	// Send domains to the channel
-	for _, d := range githubURLs {
-		domains <- d
+	for _, domain := range githubURLs {
+		domains <- domain
 	}
 	close(domains)
 
 	wg.Wait()
 
-	content := ""
-	for k, v := range results {
-		content += v + strings.Repeat(" ", 16-len(v)) + k + "\n"
+	var content strings.Builder
+	for hostname, ip := range hostnamesToIPs {
+		content.WriteString(ip + strings.Repeat(" ", 20-len(ip)) + hostname + "\n")
 	}
 
-	return fmt.Sprintf(HOSTS_TEMPLATE, content, time.Now())
+	return fmt.Sprintf(HOSTS_TEMPLATE, content.String(), time.Now())
 }
 
 func main() {
