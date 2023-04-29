@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"sync"
@@ -102,7 +103,7 @@ func Ping(addr string) (int64, error) {
 	}
 
 	pinger.SetPrivileged(true)
-	pinger.Count = 1
+	pinger.Count = 3
 	pinger.Interval = time.Duration(1 * time.Second)
 	err = pinger.Run()
 	if err != nil {
@@ -114,7 +115,31 @@ func Ping(addr string) (int64, error) {
 	return int64(stats.MaxRtt), nil
 }
 
-func generateHosts() string {
+func pingIP(ips []string) string {
+	var minDelay int64 = math.MaxInt64
+	minDelayIP := ips[0]
+	for _, ip := range ips {
+		delay, err := Ping(ip)
+		if err != nil {
+			continue
+		}
+		if delay < minDelay {
+			minDelay = delay
+			minDelayIP = ip
+		}
+	}
+	return minDelayIP
+}
+
+func lastIP(ips []string) string {
+	return ips[len(ips)-1]
+}
+
+func randomSelect(ips []string) string {
+	return ips[rand.Intn(len(ips))]
+}
+
+func generateHosts(bestIP func(ips []string) string) string {
 
 	results := map[string]string{}
 
@@ -135,18 +160,7 @@ func generateHosts() string {
 				return
 			}
 
-			var minDelay int64 = math.MaxInt64
-			minDelayIP := ips[0]
-			for _, ip := range ips {
-				delay, err := Ping(ip)
-				if err != nil {
-					continue
-				}
-				if delay < minDelay {
-					minDelay = delay
-					minDelayIP = ip
-				}
-			}
+			minDelayIP := bestIP(ips)
 			mu.Lock()
 			results[addr] = minDelayIP
 			mu.Unlock()
@@ -166,6 +180,6 @@ func generateHosts() string {
 func main() {
 	//fmt.Println("domain to ip start")
 	//DomainToIP("assets-cdn.github.com")
-	r := generateHosts()
+	r := generateHosts(lastIP)
 	fmt.Println(r)
 }
