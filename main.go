@@ -189,6 +189,6 @@ func generateHosts(bestIP func(ips []string) string) string {
 func main() {
 	//fmt.Println("domain to ip start")
 	//DomainToIP("assets-cdn.github.com")
-	r := generateHosts(lastIP)
+	r := generateHosts(randomSelect)
 	fmt.Println(r)
 }
