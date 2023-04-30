@@ -113,7 +113,7 @@ func Ping(addr string) (int64, error) {
 	stats := pinger.Statistics()
 	pinger.Stop()
 	//fmt.Println(stats)
-	return int64(stats.MaxRtt), nil
+	return int64(stats.MinRtt), nil
 }
 
 func pingIP(ips []string) string {
@@ -140,7 +140,7 @@ func randomSelect(ips []string) string {
 	return ips[rand.Intn(len(ips))]
 }
 
-func generateHosts(bestIP func(ips []string) string) string {
+func generateHosts(hosts []string, bestIP func(ips []string) string) string {
 	var hostnamesToIPs = make(map[string]string)
 	var mutex sync.Mutex
 
@@ -171,7 +171,7 @@ func generateHosts(bestIP func(ips []string) string) string {
 	}
 
 	// Send domains to the channel
-	for _, domain := range githubURLs {
+	for _, domain := range hosts {
 		domains <- domain
 	}
 	close(domains)
@@ -189,6 +189,6 @@ func generateHosts(bestIP func(ips []string) string) string {
 func main() {
 	//fmt.Println("domain to ip start")
 	//DomainToIP("assets-cdn.github.com")
-	r := generateHosts(randomSelect)
+	r := generateHosts(githubURLs, pingIP)
 	fmt.Println(r)
 }
